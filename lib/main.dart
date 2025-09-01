@@ -819,7 +819,7 @@ class ContactPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'We\'re here to help',
+                          'I am here to help',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
@@ -844,20 +844,20 @@ class ContactPage extends StatelessWidget {
                 _ContactCard(
                   icon: Icons.email_outlined,
                   title: 'Email',
-                  subtitle: 'support@example.com',
-                  onTap: () => _launch(Uri.parse('mailto:support@example.com?subject=Background%20Video%20Recorder%20Support')),
+                  subtitle: 'mamaruyirga1394@gmail.com',
+                  onTap: () => _launch(Uri.parse('mailto:mamaruyirga1394@gmail.com?subject=Background%20Video%20Recorder%20Support')),
                 ),
                 _ContactCard(
                   icon: Icons.language_outlined,
                   title: 'Website',
-                  subtitle: 'https://example.com',
-                  onTap: () => _launch(Uri.parse('https://example.com')),
+                  subtitle: 'My portfolio',
+                  onTap: () => _launch(Uri.parse('https://my-portfolio-five-olive-23.vercel.app/')),
                 ),
                 _ContactCard(
                   icon: Icons.alternate_email,
                   title: 'Twitter / X',
-                  subtitle: 'https://x.com/your_handle',
-                  onTap: () => _launch(Uri.parse('https://x.com/your_handle')),
+                  subtitle: 'https://x.com/mamee1313',
+                  onTap: () => _launch(Uri.parse('https://x.com/mamee1313')),
                 ),
               ],
             ),
@@ -869,7 +869,7 @@ class ContactPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () => _launch(Uri.parse('mailto:support@example.com?subject=Background%20Video%20Recorder%20Support')),
+                    onPressed: () => _launch(Uri.parse('mailto:mamaruyirga1394@gmail.com?subject=Background%20Video%20Recorder%20Support')),
                     icon: const Icon(Icons.send),
                     label: const Text('Email Support'),
                   ),
@@ -877,7 +877,7 @@ class ContactPage extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _launch(Uri.parse('https://example.com')),
+                    onPressed: () => _launch(Uri.parse('https://my-portfolio-five-olive-23.vercel.app/')),
                     icon: const Icon(Icons.forum_outlined),
                     label: const Text('Visit Website'),
                   ),
@@ -887,7 +887,7 @@ class ContactPage extends StatelessWidget {
 
             const SizedBox(height: 12),
             Text(
-              'We typically respond within 1–2 business days.',
+              'I typically respond within 1–2 business days. Mamaru Yirga',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
