@@ -386,13 +386,14 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [cs.primary.withOpacity(0.15), cs.secondaryContainer.withOpacity(0.3)],
+                        colors: [cs.primary.withOpacity(0.15), cs.secondary.withOpacity(0.20)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           width: 56,
@@ -420,10 +421,22 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                             ],
                           ),
                         ),
-                        Icon(
-                          _isRecording ? Icons.circle : Icons.radio_button_unchecked,
-                          color: _isRecording ? Colors.red : cs.outline,
-                          size: 16,
+                        // Replace selectable-looking circle with a simple status badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isRecording ? Colors.red.withOpacity(0.12) : cs.surfaceVariant,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: _isRecording ? Colors.red : cs.outlineVariant),
+                          ),
+                          child: Text(
+                            _isRecording ? 'REC' : 'IDLE',
+                            style: TextStyle(
+                              color: _isRecording ? Colors.red : cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         )
                       ],
                     ),
@@ -431,70 +444,85 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
 
                   const SizedBox(height: 20),
 
-                  // Controls section uses SegmentedButtons to better utilize width
-                  Row(
+                  // Camera controls using ChoiceChips
+                  Text('Camera', style: Theme.of(context).textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text('Camera', style: Theme.of(context).textTheme.labelLarge),
-                            const SizedBox(height: 8),
-                            SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment(value: 'back', label: Text('Back'), icon: Icon(Icons.camera_rear_outlined)),
-                                ButtonSegment(value: 'front', label: Text('Front'), icon: Icon(Icons.camera_front_outlined)),
-                              ],
-                              selected: {_cameraFacing},
-                              onSelectionChanged: _isRecording
-                                  ? null
-                                  : (s) => setState(() => _cameraFacing = s.first),
-                            ),
-                          ],
-                        ),
+                      ChoiceChip(
+                        label: const Text('Back'),
+                        showCheckmark: false,
+                        selected: _cameraFacing == 'back',
+                        onSelected: (v) {
+                          if (!_isRecording) setState(() => _cameraFacing = 'back');
+                        },
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text('Quality', style: Theme.of(context).textTheme.labelLarge),
-                            const SizedBox(height: 8),
-                            SegmentedButton<int>(
-                              segments: const [
-                                ButtonSegment(value: 480, label: Text('480p')),
-                                ButtonSegment(value: 720, label: Text('720p')),
-                                ButtonSegment(value: 1080, label: Text('1080p')),
-                              ],
-                              selected: {_quality},
-                              onSelectionChanged: _isRecording
-                                  ? null
-                                  : (s) => setState(() => _quality = s.first),
-                            ),
-                          ],
-                        ),
+                      ChoiceChip(
+                        label: const Text('Front'),
+                        showCheckmark: false,
+                        selected: _cameraFacing == 'front',
+                        onSelected: (v) {
+                          if (!_isRecording) setState(() => _cameraFacing = 'front');
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Quality controls using ChoiceChips (keeps text horizontal)
+                  Text('Quality', style: Theme.of(context).textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('480p'),
+                        showCheckmark: false,
+                        selected: _quality == 480,
+                        onSelected: (v) {
+                          if (!_isRecording) setState(() => _quality = 480);
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('720p'),
+                        showCheckmark: false,
+                        selected: _quality == 720,
+                        onSelected: (v) {
+                          if (!_isRecording) setState(() => _quality = 720);
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('1080p'),
+                        showCheckmark: false,
+                        selected: _quality == 1080,
+                        onSelected: (v) {
+                          if (!_isRecording) setState(() => _quality = 1080);
+                        },
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 20),
 
-                  // Large action area
+                  // Large action area with increased vertical size
                   Container(
                     padding: const EdgeInsets.all(16),
+                    constraints: const BoxConstraints(minHeight: 240),
                     decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest,
+                      color: cs.surfaceVariant,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: cs.outlineVariant),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(
-                          width: double.infinity,
                           height: 56,
                           child: FilledButton.icon(
                             style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                              backgroundColor: MaterialStateProperty.resolveWith<Color?>((states) {
                                 if (_isRecording) return Colors.red;
                                 return null; // default
                               }),
@@ -504,7 +532,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                             label: Text(_isRecording ? 'Stop Recording' : 'Start Recording'),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
@@ -521,7 +549,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  // Navigate to History without switching tab index
                                   Navigator.of(context).push(
                                     MaterialPageRoute(builder: (_) => const HistoryPage()),
                                   );
@@ -532,21 +559,27 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'A notification shows while recording. Videos save to Movies/BackgroundVideoRecorder (Android 10+).',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  // Tips/Info uses more vertical space with better readability
+                  // Tips/Info
                   Card(
                     elevation: 0,
-                    color: cs.surfaceContainerLow,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
+                    color: cs.surfaceVariant.withOpacity(0.8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('Tips', style: TextStyle(fontWeight: FontWeight.bold)),
                           SizedBox(height: 8),
                           Text('• A persistent notification shows while recording.'),
@@ -678,7 +711,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     itemBuilder: (context, i) {
                       final it = _items[i];
                       return Card(
-                        color: cs.surfaceContainerLow,
+                        color: cs.surfaceVariant.withOpacity(0.8),
                         child: ListTile(
                           leading: const Icon(Icons.movie_outlined, size: 32),
                           title: Text(it.name, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -767,7 +800,7 @@ class ContactPage extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [cs.primary.withOpacity(0.15), cs.secondaryContainer.withOpacity(0.3)],
+                  colors: [cs.primary.withOpacity(0.15), cs.secondary.withOpacity(0.20)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -811,8 +844,8 @@ class ContactPage extends StatelessWidget {
                 _ContactCard(
                   icon: Icons.email_outlined,
                   title: 'Email',
-                  subtitle: 'mamaruyirga1394@gmail.com',
-                  onTap: () => _launch(Uri.parse('mailto:mamaruyirga1394@gmail.com?subject=Background%20Video%20Recorder%20Support')),
+                  subtitle: 'support@example.com',
+                  onTap: () => _launch(Uri.parse('mailto:support@example.com?subject=Background%20Video%20Recorder%20Support')),
                 ),
                 _ContactCard(
                   icon: Icons.language_outlined,
@@ -824,7 +857,7 @@ class ContactPage extends StatelessWidget {
                   icon: Icons.alternate_email,
                   title: 'Twitter / X',
                   subtitle: 'https://x.com/your_handle',
-                  onTap: () => _launch(Uri.parse('https://x.com/mamee1313')),
+                  onTap: () => _launch(Uri.parse('https://x.com/your_handle')),
                 ),
               ],
             ),
@@ -836,7 +869,7 @@ class ContactPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () => _launch(Uri.parse('mailto:mamaruyirga1394@gmail.com?subject=Background%20Video%20Recorder%20Support')),
+                    onPressed: () => _launch(Uri.parse('mailto:support@example.com?subject=Background%20Video%20Recorder%20Support')),
                     icon: const Icon(Icons.send),
                     label: const Text('Email Support'),
                   ),
@@ -879,7 +912,7 @@ class _ContactCard extends StatelessWidget {
     return SizedBox(
       width: 500, // allows Wrap to arrange in 1–2 columns depending on width
       child: Card(
-        color: cs.surfaceContainerLow,
+        color: cs.surfaceVariant.withOpacity(0.8),
         child: ListTile(
           leading: Icon(icon, size: 28),
           title: Text(title),
