@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Needed on Android 13+ to read videos from shared storage (MediaStore) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <application
         android:label="background_video_recorder"
         android:name="${applicationName}"
