@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'video_player_screen.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -46,12 +47,16 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<void> _open(RecordingItem item) async {
     try {
-      final uri = item.uri;
-      final ok = await launchUrl(
-        uri != null ? Uri.parse(uri) : Uri.file(item.path!),
-        mode: LaunchMode.externalApplication,
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VideoPlayerPage(
+            title: item.name,
+            uri: item.uri,
+            path: item.path,
+          ),
+        ),
       );
-      if (!ok) _snack('No app found to open this video');
     } catch (e) {
       _snack('Failed to open: $e');
     }
@@ -124,9 +129,9 @@ class _HistoryPageState extends State<HistoryPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                tooltip: 'Open',
+                                tooltip: 'Play',
                                 onPressed: () => _open(it),
-                                icon: const Icon(Icons.open_in_new),
+                                icon: const Icon(Icons.play_circle_fill),
                               ),
                               IconButton(
                                 tooltip: 'Delete',

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,11 +19,30 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
   String _status = 'Idle';
   String _cameraFacing = 'back'; // or 'front'
   int _quality = 1080; // 480, 720, 1080
+  Timer? _statePoller;
+  int? _recordingStartEpochSec;
 
   @override
   void initState() {
     super.initState();
     _ensurePermissions(silent: true);
+
+    // Listen for native recording state changes (e.g., stopping from notification)
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'recordingStateChanged') {
+        final args = call.arguments;
+        bool rec = false;
+        try {
+          final map = Map<String, dynamic>.from(args as Map);
+          rec = map['recording'] == true;
+        } catch (_) {}
+        if (!mounted) return;
+        setState(() {
+          _isRecording = rec;
+          _status = rec ? 'Recording in background' : 'Stopped';
+        });
+      }
+    });
   }
 
   Future<bool> _ensurePermissions({bool silent = false}) async {
@@ -49,6 +69,40 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
     }
   }
 
+  void _startPollingForStop() {
+    _statePoller?.cancel();
+    _statePoller = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!_isRecording || _recordingStartEpochSec == null) {
+        _statePoller?.cancel();
+        return;
+      }
+      try {
+        final res = await _channel.invokeMethod('listRecordings');
+        final list = (res as List?)?.cast<dynamic>() ?? const [];
+        if (list.isEmpty) return;
+        bool found = false;
+        for (final e in list) {
+          try {
+            final m = Map<String, dynamic>.from(e as Map);
+            final int dateSec = (m['date'] as num).toInt();
+            if (dateSec >= (_recordingStartEpochSec! - 1)) {
+              found = true;
+              break;
+            }
+          } catch (_) {}
+        }
+        if (found) {
+          if (!mounted) return;
+          setState(() {
+            _isRecording = false;
+            _status = 'Stopped';
+          });
+          _statePoller?.cancel();
+        }
+      } catch (_) {}
+    });
+  }
+
   Future<void> _startRecording() async {
     if (!await _ensurePermissions()) return;
 
@@ -62,10 +116,13 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
         'quality': _quality,
       });
       if (!mounted) return;
+      final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       setState(() {
         _isRecording = true;
         _status = 'Recording in background';
+        _recordingStartEpochSec = nowSec;
       });
+      _startPollingForStop();
       _showSnack('Recording started. You can switch apps or lock the screen.');
     } on PlatformException catch (e) {
       _showSnack('Failed to start: ${e.message}');
@@ -78,6 +135,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
 
   Future<void> _stopRecording() async {
     try {
+      _statePoller?.cancel();
       await _channel.invokeMethod('stopService');
       if (!mounted) return;
       setState(() {
@@ -97,6 +155,12 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
+  }
+
+  @override
+  void dispose() {
+    _statePoller?.cancel();
+    super.dispose();
   }
 
   @override
@@ -305,16 +369,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
           },
         ),
       ),
-    );
-  }
-}
-
-class _HistoryPlaceholder extends StatelessWidget {
-  const _HistoryPlaceholder();
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('History will be linked after refactor.')),
     );
   }
 }

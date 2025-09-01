@@ -33,6 +33,9 @@ class ForegroundVideoService : Service() {
         const val ACTION_STOP = "com.example.background_video_recorder.action.STOP"
         const val EXTRA_CAMERA_FACING = "camera_facing" // "back" or "front"
         const val EXTRA_QUALITY = "quality" // e.g., 720, 1080
+        const val ACTION_STATE = "com.example.background_video_recorder.action.STATE"
+        const val EXTRA_RECORDING = "extra_recording"
+        @JvmStatic @Volatile var IS_RECORDING: Boolean = false
     }
 
     private lateinit var notificationManager: NotificationManager
@@ -146,6 +149,8 @@ class ForegroundVideoService : Service() {
                             requestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
                             session.setRepeatingRequest(requestBuilder.build(), null, null)
                             mediaRecorder?.start()
+                            IS_RECORDING = true
+                            notifyRecordingState(true)
                             val where = outputDisplayName?.let { name ->
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "Saved to Movies/BackgroundVideoRecorder/$name"
                                 else outputFile?.absolutePath ?: "Recording..."
@@ -303,6 +308,8 @@ class ForegroundVideoService : Service() {
             else outputFile?.absolutePath ?: ""
         } ?: ""
         updateNotification(if (where.isNotEmpty()) "Recording stopped: $where" else "Recording stopped")
+        IS_RECORDING = false
+        notifyRecordingState(false)
 
         releaseWakeLock()
     }
@@ -357,5 +364,13 @@ class ForegroundVideoService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         stopRecording()
+    }
+
+    private fun notifyRecordingState(recording: Boolean) {
+        try {
+            val intent = Intent(ACTION_STATE)
+            intent.putExtra(EXTRA_RECORDING, recording)
+            sendBroadcast(intent)
+        } catch (_: Exception) {}
     }
 }
