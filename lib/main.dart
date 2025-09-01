@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const BackgroundVideoRecorderApp());
 }
 
@@ -19,8 +21,207 @@ class BackgroundVideoRecorderApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: const RecorderHomePage(),
+      home: const _AppRoot(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+/// Decides whether to show onboarding or the recorder screen
+class _AppRoot extends StatelessWidget {
+  const _AppRoot();
+
+  Future<bool> _onboardingDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('onboarding_done') ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _onboardingDone(),
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snap.data == true
+            ? const RecorderHomePage()
+            : const OnboardingPage();
+      },
+    );
+  }
+}
+
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  final _pageController = PageController();
+  int _index = 0;
+  bool _requesting = false;
+
+  Future<void> _markDoneAndContinue() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const RecorderHomePage()),
+    );
+  }
+
+  Future<void> _requestPermissions() async {
+    setState(() => _requesting = true);
+    try {
+      final req = <Permission>[Permission.camera, Permission.microphone];
+      if (Platform.isAndroid) req.add(Permission.notification);
+      await req.request();
+    } finally {
+      if (mounted) setState(() => _requesting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      _OnboardSlide(
+        icon: Icons.videocam_outlined,
+        title: 'Record in the background',
+        text:
+            'Capture video while using other apps or when the screen is off. A persistent notification keeps you in control.',
+      ),
+      _OnboardSlide(
+        icon: Icons.tune,
+        title: 'Choose camera and quality',
+        text:
+            'Select front/back camera and set the recording quality that fits your needs (480p, 720p, 1080p).',
+      ),
+      _OnboardSlide(
+        icon: Icons.folder_special_outlined,
+        title: 'Your videos, easy to find',
+        text: Platform.isAndroid
+            ? 'On Android 10+, videos are saved to Movies/BackgroundVideoRecorder and visible in your Gallery.'
+            : 'Videos are saved in the app folder.'
+      ),
+    ];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _index = i),
+                children: pages,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      pages.length,
+                      (i) => Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i == _index
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _requesting ? null : _requestPermissions,
+                          icon: _requesting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.lock_open_outlined),
+                          label: const Text('Grant Permissions'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _markDoneAndContinue,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text('Get Started'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      'Use responsibly. Always comply with local laws and inform people when recording.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardSlide extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String text;
+
+  const _OnboardSlide({required this.icon, required this.title, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 12),
+          Icon(icon, size: 92, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 24),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -43,7 +244,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
   @override
   void initState() {
     super.initState();
-    // Optionally pre-request permissions for smoother UX.
     _ensurePermissions(silent: true);
   }
 
@@ -51,7 +251,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
     try {
       final toRequest = <Permission>[Permission.camera, Permission.microphone];
       if (Platform.isAndroid) {
-        // On Android 13+ this is required for foreground notification.
         toRequest.add(Permission.notification);
       }
       final statuses = await toRequest.request();
@@ -105,7 +304,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
         _isRecording = false;
         _status = 'Stopped';
       });
-      _showSnack('Recording stopped. Files are saved in the app Movies folder.');
+      _showSnack('Recording stopped. Files are saved in the Movies folder.');
     } on PlatformException catch (e) {
       _showSnack('Failed to stop: ${e.message}');
     } catch (e) {
@@ -125,6 +324,19 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Background Video Recorder'),
+        actions: [
+          IconButton(
+            tooltip: 'About',
+            onPressed: () => showAboutDialog(
+              context: context,
+              applicationName: 'Background Video Recorder',
+              applicationVersion: '1.0.0',
+              applicationLegalese:
+                  'Use responsibly. Comply with laws and always inform people when recording.',
+            ),
+            icon: const Icon(Icons.info_outline),
+          )
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -239,7 +451,7 @@ class _InfoCard extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               '- A persistent notification will appear while recording.\n'
-              '- Videos are saved to the app\'s Movies directory (no storage permission needed).\n'
+              '- Videos are saved to the Movies/BackgroundVideoRecorder folder on Android 10+.\n'
               '- If recording stops unexpectedly, disable battery optimization for this app.',
             ),
           ],
